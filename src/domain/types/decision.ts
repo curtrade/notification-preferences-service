@@ -9,9 +9,7 @@ export type DenyReason =
   | 'quiet_hours';
 
 /** Outcome of evaluating whether a notification may be sent. */
-export type Decision =
-  | { decision: 'allow' }
-  | { decision: 'deny'; reason: DenyReason };
+export type Decision = { decision: 'allow' } | { decision: 'deny'; reason: DenyReason };
 
 export const allow = (): Decision => ({ decision: 'allow' });
 

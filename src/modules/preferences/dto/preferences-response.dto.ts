@@ -1,20 +1,50 @@
-import { Channel } from '../../../domain/types/channel';
-import { NotificationType } from '../../../domain/types/notification-type';
+import { ApiProperty } from '@nestjs/swagger';
+import { CHANNELS, Channel } from '../../../domain/types/channel';
+import { NOTIFICATION_TYPES, NotificationType } from '../../../domain/types/notification-type';
 
-export interface ResolvedPreference {
+export class ResolvedPreference {
+  @ApiProperty({ enum: NOTIFICATION_TYPES, description: 'Категория уведомления.' })
   notificationType: NotificationType;
+
+  @ApiProperty({ enum: CHANNELS, description: 'Канал доставки.' })
   channel: Channel;
+
+  @ApiProperty({ description: 'Включена ли отправка для данной пары «тип + канал».' })
   enabled: boolean;
-  /** Where this value came from: the user's override or the system default. */
+
+  @ApiProperty({
+    enum: ['user', 'default'],
+    description:
+      'Источник значения: переопределение пользователя или системное значение по умолчанию.',
+  })
   source: 'user' | 'default';
 }
 
-export interface PreferencesResponse {
+export class QuietHoursResponse {
+  @ApiProperty({ description: 'Начало «тихих часов» в формате HH:mm.', example: '22:00' })
+  startTime: string;
+
+  @ApiProperty({ description: 'Окончание «тихих часов» в формате HH:mm.', example: '08:00' })
+  endTime: string;
+
+  @ApiProperty({ description: 'Часовой пояс IANA.', example: 'Europe/Moscow' })
+  timezone: string;
+}
+
+export class PreferencesResponse {
+  @ApiProperty({ description: 'Идентификатор пользователя.', example: 'user-42' })
   userId: string;
+
+  @ApiProperty({
+    type: [ResolvedPreference],
+    description: 'Итоговые настройки по всем парам «тип + канал» с учётом значений по умолчанию.',
+  })
   preferences: ResolvedPreference[];
-  quietHours: {
-    startTime: string;
-    endTime: string;
-    timezone: string;
-  } | null;
+
+  @ApiProperty({
+    type: QuietHoursResponse,
+    nullable: true,
+    description: '«Тихие часы» пользователя или null, если не заданы.',
+  })
+  quietHours: QuietHoursResponse | null;
 }

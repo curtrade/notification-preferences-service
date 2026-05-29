@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -15,23 +16,29 @@ import { IsTimeZone } from '../../../common/validation/is-timezone.validator';
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export class PreferenceToggleDto {
+  @ApiProperty({ enum: NOTIFICATION_TYPES, description: 'Категория уведомления.' })
   @IsIn(NOTIFICATION_TYPES)
   notificationType: NotificationType;
 
+  @ApiProperty({ enum: CHANNELS, description: 'Канал доставки.' })
   @IsIn(CHANNELS)
   channel: Channel;
 
+  @ApiProperty({ description: 'Включить или выключить отправку для этой пары.' })
   @IsBoolean()
   enabled: boolean;
 }
 
 export class QuietHoursDto {
+  @ApiProperty({ description: 'Начало «тихих часов» в формате HH:mm.', example: '22:00' })
   @Matches(HHMM, { message: 'startTime must be HH:mm (00:00–23:59)' })
   startTime: string;
 
+  @ApiProperty({ description: 'Окончание «тихих часов» в формате HH:mm.', example: '08:00' })
   @Matches(HHMM, { message: 'endTime must be HH:mm (00:00–23:59)' })
   endTime: string;
 
+  @ApiProperty({ description: 'Часовой пояс IANA.', example: 'Europe/Moscow' })
   @IsTimeZone()
   timezone: string;
 }
@@ -41,6 +48,10 @@ export class QuietHoursDto {
  * toggle preferences, set quiet hours, or both in one idempotent request.
  */
 export class UpdatePreferencesDto {
+  @ApiPropertyOptional({
+    type: [PreferenceToggleDto],
+    description: 'Переключатели настроек. Должен содержать хотя бы один элемент, если передан.',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
@@ -48,6 +59,7 @@ export class UpdatePreferencesDto {
   @Type(() => PreferenceToggleDto)
   preferences?: PreferenceToggleDto[];
 
+  @ApiPropertyOptional({ type: QuietHoursDto, description: '«Тихие часы» пользователя.' })
   @IsOptional()
   @ValidateNested()
   @Type(() => QuietHoursDto)

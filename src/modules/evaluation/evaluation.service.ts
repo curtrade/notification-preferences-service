@@ -25,15 +25,21 @@ export class EvaluationService {
     const { userId, notificationType, channel, region } = req;
     const datetime = new Date(req.datetime);
 
-    const [userPreference, defaultEnabled, quietHoursRecord, hasMatchingPolicy] = await Promise.all([
-      this.preferences.findUserPreference(userId, notificationType, channel),
-      this.preferences.findDefault(notificationType, channel),
-      this.preferences.getQuietHours(userId),
-      this.policies.hasDenyPolicy(notificationType, channel, region),
-    ]);
+    const [userPreference, defaultEnabled, quietHoursRecord, hasMatchingPolicy] = await Promise.all(
+      [
+        this.preferences.findUserPreference(userId, notificationType, channel),
+        this.preferences.findDefault(notificationType, channel),
+        this.preferences.getQuietHours(userId),
+        this.policies.hasDenyPolicy(notificationType, channel, region),
+      ],
+    );
 
     const quietHours = quietHoursRecord
-      ? new QuietHours(quietHoursRecord.startTime, quietHoursRecord.endTime, quietHoursRecord.timezone)
+      ? new QuietHours(
+          quietHoursRecord.startTime,
+          quietHoursRecord.endTime,
+          quietHoursRecord.timezone,
+        )
       : undefined;
 
     const input: EvaluationInput = {

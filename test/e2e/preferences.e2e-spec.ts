@@ -43,7 +43,9 @@ describe('Preferences (e2e)', () => {
 
   it('scenario 2: disabling marketing email reflects in GET; transactional stays enabled', async () => {
     const id = uniqueUserId();
-    await post(id, { preferences: [{ notificationType: 'MARKETING', channel: 'EMAIL', enabled: false }] }).expect(201);
+    await post(id, {
+      preferences: [{ notificationType: 'MARKETING', channel: 'EMAIL', enabled: false }],
+    }).expect(201);
 
     const res = await get(id).expect(200);
     expect(pick(res.body.preferences, 'MARKETING', 'EMAIL')).toMatchObject({
@@ -55,7 +57,9 @@ describe('Preferences (e2e)', () => {
 
   it('scenario 5: applying the same change twice is idempotent (one row, identical state)', async () => {
     const id = uniqueUserId();
-    const body = { preferences: [{ notificationType: 'MARKETING', channel: 'EMAIL', enabled: false }] };
+    const body = {
+      preferences: [{ notificationType: 'MARKETING', channel: 'EMAIL', enabled: false }],
+    };
 
     const first = await post(id, body).expect(201);
     const second = await post(id, body).expect(201);

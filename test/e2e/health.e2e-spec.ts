@@ -22,9 +22,6 @@ describe('Health (e2e)', () => {
   });
 
   it('GET /health returns 200 with status ok', () => {
-    return request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ status: 'ok' });
+    return request(app.getHttpServer()).get('/health').expect(200).expect({ status: 'ok' });
   });
 });
