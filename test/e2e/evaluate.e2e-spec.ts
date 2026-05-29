@@ -18,8 +18,8 @@ describe('Evaluate (e2e)', () => {
     await app.close();
   });
 
-  const evaluate = (body: unknown) => request(app.getHttpServer()).post('/evaluate').send(body);
-  const setPrefs = (id: string, body: unknown) =>
+  const evaluate = (body: object) => request(app.getHttpServer()).post('/evaluate').send(body);
+  const setPrefs = (id: string, body: object) =>
     request(app.getHttpServer()).post(`/users/${id}/preferences`).send(body);
 
   it('scenario 4: marketing SMS in EU is blocked by global policy', async () => {

@@ -19,7 +19,7 @@ describe('Preferences (e2e)', () => {
   });
 
   const get = (id: string) => request(app.getHttpServer()).get(`/users/${id}/preferences`);
-  const post = (id: string, body: unknown) =>
+  const post = (id: string, body: object) =>
     request(app.getHttpServer()).post(`/users/${id}/preferences`).send(body);
 
   type Pref = { notificationType: string; channel: string; enabled: boolean; source: string };
