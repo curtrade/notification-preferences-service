@@ -166,6 +166,25 @@ exact `decision` / `reason` pair.
 
 ---
 
+## Swagger / OpenAPI
+
+Once the service is running, interactive docs are available at:
+
+- **Swagger UI** — [http://localhost:3000/docs](http://localhost:3000/docs)
+- **OpenAPI JSON** — `http://localhost:3000/docs-json`
+
+The UI is generated from the controllers' own metadata (`@nestjs/swagger`), so it
+always matches the real routes: tags, paths, request/response schemas, and enum
+values (`channel`, `notificationType`, `region`) are emitted automatically. You can
+fire requests straight from the UI with **Try it out**.
+
+The document covers every endpoint grouped by tag — `evaluate`, `preferences`,
+`health`. The mount path is defined in `src/swagger/setup-swagger.ts`
+(`SWAGGER_PATH`), and the document's correctness is asserted by the e2e test
+`test/e2e/swagger.e2e-spec.ts`.
+
+---
+
 ## API
 
 ### `GET /users/:id/preferences`

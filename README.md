@@ -169,6 +169,25 @@ E2E-тесты прогоняют реальный HTTP API через Prisma и
 
 ---
 
+## Swagger / OpenAPI
+
+После запуска сервиса интерактивная документация доступна по адресам:
+
+- **Swagger UI** — [http://localhost:3000/docs](http://localhost:3000/docs)
+- **OpenAPI JSON** — `http://localhost:3000/docs-json`
+
+UI генерируется из метаданных самих контроллеров (`@nestjs/swagger`), поэтому всегда
+соответствует реальным роутам: теги, пути, схемы запросов/ответов и значения enum
+(`channel`, `notificationType`, `region`) выводятся автоматически. Запросы можно
+отправлять прямо из UI кнопкой **Try it out**.
+
+Документ покрывает все эндпоинты, сгруппированные по тегам — `evaluate`,
+`preferences`, `health`. Путь монтирования задаётся в
+`src/swagger/setup-swagger.ts` (`SWAGGER_PATH`), а корректность документа
+проверяется e2e-тестом `test/e2e/swagger.e2e-spec.ts`.
+
+---
+
 ## API
 
 ### `GET /users/:id/preferences`
