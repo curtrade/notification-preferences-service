@@ -1,40 +1,41 @@
 # Notification Preferences Service
 
-**English** | [Русский](README_RUS.md)
+ **Русский** | [English](README_ENG.md)
 
-Single source of truth for **whether a notification may be sent** to a user on a
-given channel — taking into account the user's own choices, system defaults,
-quiet hours (timezone-aware), and global policies.
+Единый источник правды о том, **можно ли отправить уведомление** пользователю по
+конкретному каналу — с учётом его собственных настроек, системных дефолтов,
+quiet hours (с учётом таймзоны) и глобальных политик.
 
-Built with **NestJS + TypeScript**, **PostgreSQL** via **Prisma**, typed config
-via **@itgorillaz/configify**, and **Jest** for tests.
-
----
-
-## What it does
-
-Three responsibilities:
-
-1. **Store** preferences — per-(type, channel) defaults, per-user overrides,
-   per-user quiet hours, and global policies.
-2. **Expose** an API to read and update a user's preferences.
-3. **Decide** — given a send attempt, return `allow` / `deny` and a reason.
+Построено на **NestJS + TypeScript**, **PostgreSQL** через **Prisma**,
+типизированная конфигурация через **@itgorillaz/configify**, тесты на **Jest**.
 
 ---
 
-## Quick start (Docker)
+## Что делает сервис
 
-Requires Docker + Docker Compose.
+Три зоны ответственности:
+
+1. **Хранит** настройки — дефолты по (тип, канал), индивидуальные переопределения
+   пользователя, quiet hours пользователя и глобальные политики.
+2. **Предоставляет** API для чтения и изменения настроек пользователя.
+3. **Принимает решение** — по входным данным об отправке возвращает `allow` / `deny`
+   и причину.
+
+---
+
+## Быстрый старт (Docker)
+
+Требуется Docker + Docker Compose.
 
 ```bash
 docker compose up --build
 ```
 
-This starts PostgreSQL, then the service container which **applies migrations,
-seeds defaults + a sample policy, and starts the API** on
+Поднимается PostgreSQL, затем контейнер сервиса, который **применяет миграции,
+сидит дефолты + пример политики и запускает API** на
 [http://localhost:3000](http://localhost:3000).
 
-Smoke test:
+Проверка:
 
 ```bash
 curl localhost:3000/health
@@ -43,46 +44,48 @@ curl localhost:3000/health
 
 ---
 
-## Local setup (without Docker)
+## Локальный запуск (без Docker)
 
-Requires Node.js 22+ and a reachable PostgreSQL instance.
+Требуется Node.js 22+ и доступный экземпляр PostgreSQL.
 
 ```bash
-# 1. Install dependencies
+# 1. Установить зависимости
 npm install
 
-# 2. Configure environment
+# 2. Настроить окружение
 cp .env.example .env
-#   edit DATABASE_URL if your Postgres differs from the default
+#   при необходимости отредактируйте DATABASE_URL под свой Postgres
 
-# 3. Apply the schema and seed defaults + sample policy
-npm run prisma:migrate:dev      # creates/applies migrations
+# 3. Применить схему и засидить дефолты + пример политики
+npm run prisma:migrate:dev      # создаёт/применяет миграции
 npm run prisma:seed
 
-# 4. Run
+# 4. Запустить
 npm run start:dev
 ```
 
-`.env` keys: `PORT`, `LOG_LEVEL`, `DATABASE_URL`. Configify validates these at
-boot — a missing `DATABASE_URL` or bad `PORT` aborts startup with a clear error.
+Ключи `.env`: `PORT`, `LOG_LEVEL`, `DATABASE_URL`. Configify валидирует их при
+старте — отсутствующий `DATABASE_URL` или некорректный `PORT` прерывают запуск с
+понятной ошибкой.
 
 ---
 
-## Running tests
+## Запуск тестов
 
 ```bash
-# Unit tests — pure domain logic (decision engine, quiet-hours math). No DB.
+# Unit-тесты — чистая доменная логика (движок решений, расчёт quiet hours). Без БД.
 npm test
 
-# End-to-end tests — full HTTP + Prisma against a real Postgres.
-#   Requires a migrated + seeded database (steps 3 above).
+# End-to-end тесты — полный HTTP + Prisma против реального Postgres.
+#   Требуется применённая миграция и засиженная БД (шаг 3 выше).
 npm run test:e2e
 ```
 
-Unit tests cover the decision engine and timezone/quiet-hours logic in isolation.
-E2E tests drive the real HTTP API through Prisma and assert the five required
-scenarios end to end. E2E tests use unique user IDs per case and clean up
-user-scoped rows afterward; seeded defaults and policies are read-only.
+Unit-тесты покрывают движок решений и логику таймзон/quiet hours в изоляции.
+E2E-тесты прогоняют реальный HTTP API через Prisma и проверяют все пять
+обязательных сценариев от начала до конца. E2E используют уникальные ID
+пользователей в каждом кейсе и подчищают пользовательские строки после прогона;
+засиженные дефолты и политики — только на чтение.
 
 ---
 
@@ -90,8 +93,8 @@ user-scoped rows afterward; seeded defaults and policies are read-only.
 
 ### `GET /users/:id/preferences`
 
-Returns defaults merged with the user's overrides (overrides win), each tagged
-with its `source`, plus quiet hours.
+Возвращает дефолты, объединённые с переопределениями пользователя (приоритет у
+переопределений), каждое помечено своим `source`, плюс quiet hours.
 
 ```bash
 curl localhost:3000/users/user-1/preferences
@@ -110,8 +113,8 @@ curl localhost:3000/users/user-1/preferences
 
 ### `POST /users/:id/preferences`
 
-Toggle preferences and/or set quiet hours. Both fields optional. Idempotent.
-Returns the resulting merged preferences.
+Переключение настроек и/или установка quiet hours. Оба поля опциональны.
+Идемпотентно. Возвращает итоговые объединённые настройки.
 
 ```bash
 curl -X POST localhost:3000/users/user-1/preferences \
@@ -126,7 +129,7 @@ curl -X POST localhost:3000/users/user-1/preferences \
 
 ### `POST /evaluate`
 
-Decide whether a send is allowed.
+Решает, разрешена ли отправка.
 
 ```bash
 curl -X POST localhost:3000/evaluate \
@@ -144,10 +147,10 @@ curl -X POST localhost:3000/evaluate \
 { "decision": "deny", "reason": "blocked_by_global_policy" }
 ```
 
-Possible `reason` values: `blocked_by_global_policy`,
+Возможные значения `reason`: `blocked_by_global_policy`,
 `disabled_by_user_preference`, `quiet_hours`, `disabled_by_default`.
 
-**Domain values**
+**Доменные значения**
 
 - `channel`: `EMAIL`, `SMS`, `PUSH`, `MESSENGER`
 - `notificationType`: `TRANSACTIONAL`, `MARKETING`
@@ -155,76 +158,79 @@ Possible `reason` values: `blocked_by_global_policy`,
 
 ---
 
-## Architecture & key decisions
+## Архитектура и ключевые решения
 
-**Domain / infrastructure split.** The decision engine and quiet-hours logic
-live in `src/domain/` with **zero** NestJS or Prisma imports — they are pure,
-deterministic, and unit-tested in isolation. The infrastructure layer
-(`src/modules/`, `src/prisma/`) loads data via Prisma repositories and feeds the
-pure engine.
+**Разделение домена и инфраструктуры.** Движок решений и логика quiet hours
+живут в `src/domain/` с **нулём** импортов NestJS или Prisma — они чистые,
+детерминированные и покрыты unit-тестами в изоляции. Инфраструктурный слой
+(`src/modules/`, `src/prisma/`) загружает данные через Prisma-репозитории и
+передаёт их чистому движку.
 
 ```
-src/domain/        pure logic — types, quiet-hours VO, decision engine
-src/modules/       NestJS controllers, services, DTOs, Prisma repositories
-src/prisma/        PrismaService (singleton) + global module
-src/config/        typed, validated configuration (configify)
-prisma/            schema, migrations, seed
+src/domain/        чистая логика — типы, value object quiet hours, движок решений
+src/modules/       контроллеры NestJS, сервисы, DTO, Prisma-репозитории
+src/prisma/        PrismaService (синглтон) + глобальный модуль
+src/config/        типизированная, валидируемая конфигурация (configify)
+prisma/            схема, миграции, сид
 ```
 
-**Decision precedence.** `/evaluate` applies layers in a fixed order; the first
-deny wins:
+**Приоритет правил.** `/evaluate` применяет слои в фиксированном порядке;
+побеждает первый deny:
 
-1. **Global policy** match `(type, channel, region)` → `blocked_by_global_policy`
-   (compliance hard-block — wins over everything).
-2. **Explicit user opt-out** → `disabled_by_user_preference`.
-3. **Quiet hours** (marketing types only, inside the user's window) → `quiet_hours`.
-4. **Effective state off** (user override, else default) → `disabled_by_default`.
-5. Otherwise → `allow`.
+1. **Глобальная политика** по `(тип, канал, регион)` → `blocked_by_global_policy`
+   (compliance hard-block — побеждает всё).
+2. **Явный отказ пользователя** → `disabled_by_user_preference`.
+3. **Quiet hours** (только маркетинговые типы, внутри окна пользователя) → `quiet_hours`.
+4. **Эффективное состояние выключено** (переопределение пользователя, иначе дефолт) → `disabled_by_default`.
+5. Иначе → `allow`.
 
-An explicit user "on" overrides a default "off" but is still subject to quiet
-hours and global policy.
+Явное «вкл» пользователя перекрывает дефолтное «выкл», но всё ещё подчиняется
+quiet hours и глобальной политике.
 
-**Types vs. channels.** A preference is keyed on the `(notificationType, channel)`
-pair. `notificationType` is the semantic category (`TRANSACTIONAL` /
-`MARKETING`); `channel` is the delivery medium. The task's composite example
-values (e.g. `marketing_email`) map to `MARKETING` + `EMAIL`.
+**Типы vs каналы.** Настройка ключуется по паре `(notificationType, channel)`.
+`notificationType` — это семантическая категория (`TRANSACTIONAL` / `MARKETING`);
+`channel` — способ доставки. Составные значения из примеров задания (например,
+`marketing_email`) мапятся в `MARKETING` + `EMAIL`.
 
-**Quiet hours & timezones.** Stored as local `HH:mm` start/end plus an IANA
-timezone. Evaluation converts the inbound UTC instant to the user's zone using
-**Luxon** (DST-correct) and tests the window with inclusive start / exclusive
-end, handling windows that wrap past midnight (e.g. 22:00–08:00). Transactional
-notifications bypass quiet hours.
+**Quiet hours и таймзоны.** Хранятся как локальные `HH:mm` начала/конца плюс
+IANA-таймзона. При оценке входящий момент в UTC конвертируется в зону пользователя
+через **Luxon** (корректно с учётом DST), а окно проверяется по правилу
+«включительно начало / исключительно конец», с обработкой окон, переходящих через
+полночь (например, 22:00–08:00). Транзакционные уведомления обходят quiet hours.
 
-**Idempotency.** Preference and quiet-hours updates are declarative `upsert`s on
-unique keys, so re-applying the same command produces identical state and never
-duplicates rows.
+**Идемпотентность.** Изменения настроек и quiet hours — это декларативные `upsert`
+по уникальным ключам, поэтому повторное применение той же команды даёт идентичное
+состояние и никогда не дублирует строки.
 
-**Defaults.** A `notification_default` table is seeded. Users have no rows until
-they override; `GET` merges defaults with overrides so a brand-new user shows the
-correct defaults without any prior write.
+**Дефолты.** Таблица `notification_default` сидится. У пользователя нет строк, пока
+он что-то не переопределит; `GET` объединяет дефолты с переопределениями, так что
+новый пользователь сразу видит корректные дефолты без единой записи.
 
 ---
 
 ## Observability
 
-- Structured logs on every **preference change** (`preference_changed`,
-  `quiet_hours_changed`) and every **evaluate decision** (`evaluate_decision`
-  with user, type, channel, region, decision, reason). No sensitive payloads.
-- Metric insertion points are marked with `// metric:` comments at the decision
-  and update sites, indicating where counters/timers would be incremented (e.g.
-  `notifications_evaluated{decision,reason}`).
+- Структурированные логи при каждом **изменении настроек** (`preference_changed`,
+  `quiet_hours_changed`) и при каждом **решении evaluate** (`evaluate_decision` с
+  user, type, channel, region, decision, reason). Без чувствительных данных.
+- Точки вставки метрик помечены комментариями `// metric:` в местах принятия
+  решений и изменения настроек, указывая, где инкрементировались бы счётчики/таймеры
+  (например, `notifications_evaluated{decision,reason}`).
 
 ---
 
-## What I'd add before production
+## Что бы я добавил перед продакшеном
 
-- **AuthN/AuthZ** — the service currently trusts the caller; add service-to-service
-  auth and per-user authorization.
-- **Admin API** for managing global policies and defaults at runtime (seeded today).
-- **Metrics & tracing** — wire the marked metric hooks to Prometheus/OpenTelemetry.
-- **Idempotency-Key** header for command de-duplication beyond upsert semantics,
-  plus an audit log of preference changes.
-- **Richer policies** — effect types beyond DENY, per-type quiet-hours exemption
-  configuration instead of the hardcoded "transactional bypasses" rule.
-- **Slimmer Docker image** — multi-stage build separating build and runtime deps.
-- **Rate limiting** and request tracing on the public endpoints.
+- **AuthN/AuthZ** — сейчас сервис доверяет вызывающей стороне; нужно добавить
+  межсервисную аутентификацию и авторизацию по пользователю.
+- **Admin API** для управления глобальными политиками и дефолтами в рантайме
+  (сейчас сидятся).
+- **Метрики и трейсинг** — подключить помеченные точки метрик к
+  Prometheus/OpenTelemetry.
+- **Заголовок Idempotency-Key** для дедупликации команд поверх семантики upsert,
+  плюс audit log изменений настроек.
+- **Более богатые политики** — типы эффекта помимо DENY, конфигурируемое исключение
+  из quiet hours по типу вместо захардкоженного правила «транзакционные обходят».
+- **Более лёгкий Docker-образ** — multi-stage сборка с разделением build- и
+  runtime-зависимостей.
+- **Rate limiting** и трейсинг запросов на публичных эндпоинтах.
