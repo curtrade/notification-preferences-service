@@ -1,0 +1,24 @@
+# Build artifacts that must never leak into the image build context.
+# A stale *.tsbuildinfo makes `nest build` skip emit (incremental: true),
+# leaving dist/main.js missing -> "Cannot find module '/app/dist/main'".
+dist
+*.tsbuildinfo
+
+# Host node_modules are built for the host platform; let `npm ci` rebuild
+# them for the alpine image instead of clobbering with COPY.
+node_modules
+
+# Secrets and local env — provided via compose `environment`, not the image.
+.env
+.env.local
+
+# VCS, tooling, docs, tests, and noise not needed at build/runtime.
+.git
+.gitignore
+.dockerignore
+coverage
+test
+docs
+.claude
+*.log
+.DS_Store
