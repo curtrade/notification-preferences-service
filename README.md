@@ -1,5 +1,7 @@
 # Notification Preferences Service
 
+**English** | [Русский](README_RUS.md)
+
 Single source of truth for **whether a notification may be sent** to a user on a
 given channel — taking into account the user's own choices, system defaults,
 quiet hours (timezone-aware), and global policies.
