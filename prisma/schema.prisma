@@ -1,0 +1,93 @@
+// Notification Preferences Service — data model.
+// Naming: PascalCase singular models, camelCase fields, snake_case tables/columns via @@map/@map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Delivery channels a notification can go out on.
+enum Channel {
+  EMAIL
+  SMS
+  PUSH
+  MESSENGER
+}
+
+// Semantic category of a notification. TRANSACTIONAL bypasses quiet hours;
+// MARKETING is subject to them (see domain layer).
+enum NotificationType {
+  TRANSACTIONAL
+  MARKETING
+}
+
+// Coarse geographic region used by global policies.
+enum Region {
+  EU
+  US
+  APAC
+  OTHER
+}
+
+// Effect of a global policy match. Only DENY is modeled today.
+enum PolicyEffect {
+  DENY
+}
+
+// Default preference for new users, per (type, channel). Seeded.
+model NotificationDefault {
+  id               String           @id @default(cuid())
+  notificationType NotificationType @map("notification_type")
+  channel          Channel
+  enabled          Boolean
+
+  @@unique([notificationType, channel])
+  @@map("notification_default")
+}
+
+// Per-user override of a (type, channel) preference.
+// The unique key is what makes updates idempotent (upsert target).
+model UserPreference {
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  notificationType NotificationType @map("notification_type")
+  channel          Channel
+  enabled          Boolean
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@unique([userId, notificationType, channel])
+  @@index([userId])
+  @@map("user_preference")
+}
+
+// Per-user quiet hours window, stored as local HH:mm plus IANA timezone.
+model UserQuietHours {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  startTime String   @map("start_time") // "HH:mm" local time
+  endTime   String   @map("end_time") // "HH:mm" local time
+  timezone  String // IANA zone, e.g. "Europe/Berlin"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_quiet_hours")
+}
+
+// Global policy that denies a (type, channel, region) combination.
+model GlobalPolicy {
+  id               String           @id @default(cuid())
+  notificationType NotificationType @map("notification_type")
+  channel          Channel
+  region           Region
+  effect           PolicyEffect     @default(DENY)
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  @@unique([notificationType, channel, region])
+  @@index([notificationType, channel, region])
+  @@map("global_policy")
+}
