@@ -22,6 +22,72 @@ Three responsibilities:
 
 ---
 
+## How it works (Dataflow)
+
+At its core this is a **decision service**: it answers one question — "may we send
+a notification of *type X* over *channel Y* to user *U* in region *R* at moment
+*T*?" → `allow` / `deny` + reason. It never sends anything; storing defaults,
+preferences, quiet hours, and policies exists only to **feed that decision**.
+
+Four data sources combine into the decision:
+
+| Source | Owned by | Table | Example (seed) |
+|---|---|---|---|
+| **Defaults** — baseline matrix for everyone | platform | `notification_default` | `MARKETING/EMAIL = off`, `TRANSACTIONAL/* = on` |
+| **User preferences** — the user's overrides | user | `user_preference` | user disabled `MARKETING/PUSH` |
+| **Quiet hours** — the user's silence window | user | `user_quiet_hours` | `22:00–08:00 Europe/Berlin` |
+| **Global policies** — compliance blocks | admin | `global_policy` | `MARKETING/SMS/EU = DENY` |
+
+### Flow A — the user reads/changes preferences
+
+```mermaid
+flowchart LR
+    U[User] -->|"POST /users/user-1/preferences"| C[PreferencesController]
+    C --> S[PreferencesService]
+    S -->|"upsert by userId + type + channel"| DB[(user_preference)]
+    S -->|"resulting merged matrix"| U
+```
+
+A write is an **upsert** on the unique key `(userId, notificationType, channel)`,
+so re-issuing the same request changes nothing — that is what makes it idempotent.
+
+### Flow B — a module asks "may I send?" (`/evaluate`)
+
+This is the heart of the service. It does I/O (loads four pieces of data **in
+parallel**), then hands them to the **pure function** `evaluate()`, which has zero
+DB/Nest access — so the core logic is testable without a database.
+
+```mermaid
+sequenceDiagram
+    participant M as Sending module
+    participant C as EvaluationController
+    participant S as EvaluationService
+    participant DB as Postgres
+    participant E as evaluate() (pure)
+
+    M->>C: POST /evaluate {userId, type, channel, region, datetime}
+    C->>S: evaluate(dto)
+    S->>DB: 4 queries in parallel
+    Note over S,DB: userPreference? · default · quietHours? · hasDenyPolicy?
+    DB-->>S: data
+    S->>E: build EvaluationInput → evaluate(input)
+    E-->>S: {decision, reason?}
+    S->>S: log(evaluate_decision …)
+    S-->>M: {decision:"allow"} | {decision:"deny", reason}
+```
+
+The order in which `evaluate()` applies the layers is in
+[Decision precedence](#architecture--key-decisions) (the first `deny` wins).
+
+**Happy path step by step** (new `user-1`, nothing configured, no quiet hours):
+
+- `TRANSACTIONAL / EMAIL / US` → no policy → user didn't opt out → not marketing →
+  default `on` → **allow** ✅
+- `MARKETING / EMAIL / US` → no policy → user didn't opt out → marketing, but no
+  silence window → default `off` → **deny: `disabled_by_default`** ✅
+
+---
+
 ## Quick start (Docker)
 
 Requires Docker + Docker Compose.
@@ -83,6 +149,20 @@ Unit tests cover the decision engine and timezone/quiet-hours logic in isolation
 E2E tests drive the real HTTP API through Prisma and assert the five required
 scenarios end to end. E2E tests use unique user IDs per case and clean up
 user-scoped rows afterward; seeded defaults and policies are read-only.
+
+Each e2e case follows **Arrange → Act → Assert**: set state
+(`POST /users/:id/preferences`), ask for a decision (`POST /evaluate`), assert the
+exact `decision` / `reason` pair.
+
+**Required scenarios mapped to tests:**
+
+| Scenario from the task | Where it's verified |
+|---|---|
+| 1. Defaults for a new user | `preferences.e2e` (GET of a new user), `evaluate.e2e` → `disabled_by_default` |
+| 2. User changes a preference | `evaluate.e2e` → `disabled_by_user_preference` |
+| 3. Quiet hours | `evaluate.e2e` (marketing deny / transactional allow) + `quiet-hours.spec` |
+| 4. Global policy | `evaluate.e2e` → `blocked_by_global_policy` |
+| 5. Idempotency | `preferences.e2e` (double POST → identical state) |
 
 ---
 
