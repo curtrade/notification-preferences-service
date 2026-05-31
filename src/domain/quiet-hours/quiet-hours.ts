@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon';
+import { DateTime, IANAZone } from 'luxon';
 
 /** HH:mm (00:00–23:59) — the canonical local-time format for quiet hours. */
 export const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -22,6 +22,20 @@ export class QuietHours {
   ) {
     this.startMinutes = QuietHours.toMinutes(startTime);
     this.endMinutes = QuietHours.toMinutes(endTime);
+  }
+
+  /**
+   * Lenient factory for data already persisted in the database. Returns null
+   * instead of throwing when the stored window is malformed (bad HH:mm or an
+   * unknown timezone), so a single corrupt row can't turn every evaluation into
+   * an HTTP 500. Validating the zone up front also guarantees isWithin won't
+   * throw later. Callers should log the null case.
+   */
+  static parse(startTime: string, endTime: string, timezone: string): QuietHours | null {
+    if (!HHMM.test(startTime) || !HHMM.test(endTime) || !IANAZone.isValidZone(timezone)) {
+      return null;
+    }
+    return new QuietHours(startTime, endTime, timezone);
   }
 
   /** True if the given instant falls inside the quiet-hours window. */
