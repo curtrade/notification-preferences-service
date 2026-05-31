@@ -41,13 +41,24 @@ export class EvaluationService {
       ],
     );
 
-    const quietHours = quietHoursRecord
-      ? new QuietHours(
-          quietHoursRecord.startTime,
-          quietHoursRecord.endTime,
-          quietHoursRecord.timezone,
-        )
-      : undefined;
+    // Tolerate corrupt stored windows: a bad row is logged and treated as "no
+    // quiet hours" rather than failing the whole evaluation with a 500.
+    let quietHours: QuietHours | undefined;
+    if (quietHoursRecord) {
+      const parsed = QuietHours.parse(
+        quietHoursRecord.startTime,
+        quietHoursRecord.endTime,
+        quietHoursRecord.timezone,
+      );
+      if (parsed) {
+        quietHours = parsed;
+      } else {
+        this.logger.warn(
+          `corrupt_quiet_hours user=${userId} start=${quietHoursRecord.startTime} ` +
+            `end=${quietHoursRecord.endTime} tz=${quietHoursRecord.timezone}`,
+        );
+      }
+    }
 
     const input: EvaluationInput = {
       type: notificationType,

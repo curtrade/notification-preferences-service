@@ -12,6 +12,7 @@ import {
 import { CHANNELS, Channel } from '../../../domain/types/channel';
 import { NOTIFICATION_TYPES, NotificationType } from '../../../domain/types/notification-type';
 import { IsTimeZone } from '../../../common/validation/is-timezone.validator';
+import { IsUniqueBy } from '../../../common/validation/is-unique-by.validator';
 import { HHMM } from '../../../domain/quiet-hours/quiet-hours';
 
 export class PreferenceToggleDto {
@@ -54,6 +55,9 @@ export class UpdatePreferencesDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
+  @IsUniqueBy<PreferenceToggleDto>(['notificationType', 'channel'], {
+    message: 'preferences must not contain duplicate (notificationType, channel) pairs',
+  })
   @ValidateNested({ each: true })
   @Type(() => PreferenceToggleDto)
   preferences?: PreferenceToggleDto[];
