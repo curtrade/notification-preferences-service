@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 
-const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+/** HH:mm (00:00–23:59) — the canonical local-time format for quiet hours. */
+export const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /**
  * A user's quiet-hours window, expressed in their local time plus an IANA

@@ -53,19 +53,25 @@ export class PreferencesService {
    * resulting merged preferences so the caller sees the effect immediately.
    */
   async updatePreferences(userId: string, dto: UpdatePreferencesDto): Promise<PreferencesResponse> {
-    for (const p of dto.preferences ?? []) {
-      await this.repo.upsertPreference(userId, p.notificationType, p.channel, p.enabled);
-      this.logger.log(
-        `preference_changed user=${userId} type=${p.notificationType} channel=${p.channel} enabled=${p.enabled}`,
-      );
-      // metric: increment counter preferences_updated{type=p.notificationType, channel=p.channel}
-    }
+    const toggles = dto.preferences ?? [];
 
     if (dto.quietHours) {
       // Defense in depth: construct the value object to revalidate format/zone
       // beyond the DTO checks before persisting.
       new QuietHours(dto.quietHours.startTime, dto.quietHours.endTime, dto.quietHours.timezone);
-      await this.repo.upsertQuietHours(userId, dto.quietHours);
+    }
+
+    // Single transaction: either every toggle and the quiet-hours window land,
+    // or none do.
+    await this.repo.applyUpdates(userId, toggles, dto.quietHours);
+
+    for (const p of toggles) {
+      this.logger.log(
+        `preference_changed user=${userId} type=${p.notificationType} channel=${p.channel} enabled=${p.enabled}`,
+      );
+      // metric: increment counter preferences_updated{type=p.notificationType, channel=p.channel}
+    }
+    if (dto.quietHours) {
       this.logger.log(
         `quiet_hours_changed user=${userId} window=${dto.quietHours.startTime}-${dto.quietHours.endTime} tz=${dto.quietHours.timezone}`,
       );

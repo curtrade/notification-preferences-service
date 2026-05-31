@@ -60,8 +60,9 @@ model UserPreference {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
+  // The composite unique index also serves userId-only lookups via its
+  // leftmost prefix, so no separate @@index([userId]) is needed.
   @@unique([userId, notificationType, channel])
-  @@index([userId])
   @@map("user_preference")
 }
 
@@ -87,7 +88,8 @@ model GlobalPolicy {
   effect           PolicyEffect     @default(DENY)
   createdAt        DateTime         @default(now()) @map("created_at")
 
+  // @@unique already creates the index for these columns; a separate @@index
+  // on the same tuple would be redundant.
   @@unique([notificationType, channel, region])
-  @@index([notificationType, channel, region])
   @@map("global_policy")
 }
