@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Channel } from '../../domain/types/channel';
 import { NotificationType } from '../../domain/types/notification-type';
@@ -69,20 +70,6 @@ export class PreferencesRepository {
     return row?.enabled;
   }
 
-  /** Idempotent upsert keyed on (userId, type, channel). */
-  async upsertPreference(
-    userId: string,
-    notificationType: NotificationType,
-    channel: Channel,
-    enabled: boolean,
-  ): Promise<void> {
-    await this.prisma.userPreference.upsert({
-      where: { userId_notificationType_channel: { userId, notificationType, channel } },
-      update: { enabled },
-      create: { userId, notificationType, channel, enabled },
-    });
-  }
-
   async getQuietHours(userId: string): Promise<QuietHoursRecord | null> {
     const row = await this.prisma.userQuietHours.findUnique({ where: { userId } });
     if (!row) {
@@ -91,12 +78,47 @@ export class PreferencesRepository {
     return { startTime: row.startTime, endTime: row.endTime, timezone: row.timezone };
   }
 
-  /** Idempotent upsert of the user's single quiet-hours window. */
-  async upsertQuietHours(userId: string, quietHours: QuietHoursRecord): Promise<void> {
-    await this.prisma.userQuietHours.upsert({
-      where: { userId },
-      update: quietHours,
-      create: { userId, ...quietHours },
-    });
+  /**
+   * Apply preference toggles and/or a quiet-hours window atomically. Every write
+   * is an idempotent upsert and all of them run in a single transaction, so a
+   * mid-batch failure leaves no partial state behind.
+   */
+  async applyUpdates(
+    userId: string,
+    preferences: PreferenceRecord[],
+    quietHours?: QuietHoursRecord,
+  ): Promise<void> {
+    const ops: Prisma.PrismaPromise<unknown>[] = preferences.map((p) =>
+      this.prisma.userPreference.upsert({
+        where: {
+          userId_notificationType_channel: {
+            userId,
+            notificationType: p.notificationType,
+            channel: p.channel,
+          },
+        },
+        update: { enabled: p.enabled },
+        create: {
+          userId,
+          notificationType: p.notificationType,
+          channel: p.channel,
+          enabled: p.enabled,
+        },
+      }),
+    );
+
+    if (quietHours) {
+      ops.push(
+        this.prisma.userQuietHours.upsert({
+          where: { userId },
+          update: quietHours,
+          create: { userId, ...quietHours },
+        }),
+      );
+    }
+
+    if (ops.length > 0) {
+      await this.prisma.$transaction(ops);
+    }
   }
 }
