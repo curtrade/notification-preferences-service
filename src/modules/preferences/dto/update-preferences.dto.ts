@@ -12,8 +12,7 @@ import {
 import { CHANNELS, Channel } from '../../../domain/types/channel';
 import { NOTIFICATION_TYPES, NotificationType } from '../../../domain/types/notification-type';
 import { IsTimeZone } from '../../../common/validation/is-timezone.validator';
-
-const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+import { HHMM } from '../../../domain/quiet-hours/quiet-hours';
 
 export class PreferenceToggleDto {
   @ApiProperty({ enum: NOTIFICATION_TYPES, description: 'Категория уведомления.' })
