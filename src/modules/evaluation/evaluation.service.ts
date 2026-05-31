@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { evaluate } from '../../domain/evaluation/evaluate';
 import { EvaluationInput } from '../../domain/evaluation/evaluation-input';
 import { QuietHours } from '../../domain/quiet-hours/quiet-hours';
+import { quietHoursApplies } from '../../domain/types/notification-type';
 import { PreferencesRepository } from '../preferences/preferences.repository';
 import { PoliciesRepository } from '../policies/policies.repository';
 import { EvaluateRequestDto } from './dto/evaluate-request.dto';
@@ -25,11 +26,17 @@ export class EvaluationService {
     const { userId, notificationType, channel, region } = req;
     const datetime = new Date(req.datetime);
 
+    // Quiet hours only affect types that observe them (marketing). Skip the
+    // lookup entirely for transactional sends, which always bypass the window.
+    const quietHoursLookup = quietHoursApplies(notificationType)
+      ? this.preferences.getQuietHours(userId)
+      : Promise.resolve(null);
+
     const [userPreference, defaultEnabled, quietHoursRecord, hasMatchingPolicy] = await Promise.all(
       [
         this.preferences.findUserPreference(userId, notificationType, channel),
         this.preferences.findDefault(notificationType, channel),
-        this.preferences.getQuietHours(userId),
+        quietHoursLookup,
         this.policies.hasDenyPolicy(notificationType, channel, region),
       ],
     );
